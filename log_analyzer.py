@@ -12,15 +12,17 @@ output_file_name = os.path.splitext(log_file_name)[0]
 output_file = output_file_path + output_file_name
 
 def from_log_into_csv(log_file_name):
-    csv_file_names = [output_file + "_triages.csv", output_file + "_queries.csv", output_file + "_projects.csv"]
+    csv_file_names = [output_file + "_triages.csv", output_file + "_queries.csv", output_file + "_projects.csv", output_file + "_simids.csv"]
     with open(log_file_path + log_file_name, 'r') as logfile:
         csv_files = [open(f, 'w', newline='') for f in csv_file_names]
         writer_triage = csv.writer(csv_files[0])
         writer_queries = csv.writer(csv_files[1])
         writer_projects = csv.writer(csv_files[2])
+        writer_results = csv.writer(csv_files[3])
         writer_triage.writerow(['Worker','SimilarityID', 'Error'])
         writer_queries.writerow(['Worker','ProjectID', 'Error'])
         writer_projects.writerow(['Projects Imported'])
+        writer_results.writerow(['query/result/path','Old similarityID','New similarityID'])
 
         for line in logfile:
             try:
@@ -58,6 +60,19 @@ def from_log_into_csv(log_file_name):
                         writer_projects.writerow([project_name])
                     else:
                         writer_projects.writerow("No project found")
+                
+                #Triages - simID changes
+                elif "Changing similarity id for" in data['msg']:
+                    match = re.search(r'query/result/path (.+)', data['msg'])
+                    print(match)
+                    if match:
+                        data = match.group(1)
+                        q_r_p = data.split('.')[0]
+                        old_simid = data.split('.')[1].split()[-1]
+                        new_simid = data.split('.')[2].split()[-1]
+                        writer_results.writerow([q_r_p,old_simid,new_simid])
+                    else:
+                        writer_results.writerow("No project found")
 
             except json.decoder.JSONDecodeError:
                 # Handle JSONDecodeError in case a line is not in json format
